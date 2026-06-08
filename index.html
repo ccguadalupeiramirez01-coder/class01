@@ -1,1 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escáner QR Pro - Nube Real</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body class="bg-light">
 
+    <div class="container my-4">
+        <h1 class="text-center mb-4">Escáner QR - Guardado en la Nube</h1>
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="card p-3 shadow-sm">
+                    <h3 class="card-title h5">1. Escanear Código QR</h3>
+                    <div id="reader" style="width: 100%;"></div>
+                    <div id="result-status" class="alert alert-info mt-2" style="display:none;"></div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card p-3 shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="card-title h5 m-0">2. Historial (Sincronizado)</h3>
+                        <button onclick="exportarCSV()" class="btn btn-success btn-sm">Exportar CSV</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover small">
+                            <thead>
+                                <tr>
+                                    <th>Columna 1</th><th>Columna 2</th><th>Columna 3</th><th>Columna 4</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historial-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // 2. CONFIGURACIÓN DE TU PROYECTO (Pega aquí lo que copiaste en el Paso 1)
+		
+		<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyCCQ5QW9b02LZ7NCC-kUDcDIfKGwNVSXBk",
+    authDomain: "qr192-ad250.firebaseapp.com",
+    projectId: "qr192-ad250",
+    storageBucket: "qr192-ad250.firebasestorage.app",
+    messagingSenderId: "261924480239",
+    appId: "1:261924480239:web:cdeb3af0f7fcf16097e71a"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+</script>
+
+		
+
+        // 3. Inicializar Firebase y Firestore
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Variables globales para el flujo local
+        let historialDatos = [];
+
+        // 4. Función encargada de enviar el registro a Firestore de forma automática
+        async function guardarEnNube(columnas) {
+            try {
+                // Creamos el objeto con la estructura de 4 columnas
+                const nuevoRegistro = {
+                    columna1: columnas[0] || '-',
+                    columna2: columnas[1] || '-',
+                    columna3: columnas[2] || '-',
+                    columna4: columnas[3] || '-',
+                    fechaServidor: serverTimestamp() // Registra la hora exacta en la nube
+                };
+
+                // Enviamos el documento a una colección llamada "escaneos"
+                const docRef = await addDoc(collection(db, "escaneos"), nuevoRegistro);
+                console.log("¡Guardado en la nube con ID:!", docRef.id);
+                
+                // Actualizar interfaz local
+                historialDatos.push(nuevoRegistro);
+                actualizarTabla();
+
+            } catch (error) {
+                console.error("Error al guardar en la nube: ", error);
+                alert("Error de conexión. No se pudo guardar en la nube.");
+            }
+        }
+
+        // --- Procesamiento del QR ---
+        function procesarDatosQR(texto) {
+            let columnas = texto.split(';'); // Separa el texto por puntos y comas
+            guardarEnNube(columnas); // Llama a la función de la nube
+        }
+
+        function actualizarTabla() {
+            const body = document.getElementById('historial-body');
+            body.innerHTML = '';
+            historialDatos.forEach(reg => {
+                body.innerHTML += `<tr>
+                    <td>${reg.columna1}</td><td>${reg.columna2}</td>
+                    <td>${reg.columna3}</td><td>${reg.columna4}</td>
+                </tr>`;
+            });
+        }
+
+        // --- Configuración básica del Escáner QR ---
+        function onScanSuccess(decodedText) {
+            document.getElementById('result-status').style.display = "block";
+            document.getElementById('result-status').innerText = `QR Detectado`;
+            procesarDatosQR(decodedText);
+        }
+        
+        const html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+        html5QrcodeScanner.render(onScanSuccess);
+
+        // Hacer la función de exportar accesible globalmente
+        window.exportarCSV = function() {
+            if(historialDatos.length === 0) return alert("No hay datos");
+            let csv = "data:text/csv;charset=utf-8,Col1,Col2,Col3,Col4\n";
+            historialDatos.forEach(r => csv += `"${r.columna1}","${r.columna2}","${r.columna3}","${r.columna4}"\n`);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodeURI(csv));
+            link.setAttribute("download", "historial.csv");
+            link.click();
+        }
+    </script>
+</body>
+</html>
